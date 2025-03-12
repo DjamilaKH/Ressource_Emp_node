@@ -1,18 +1,16 @@
-// controllers/resource.controller.js
 const db = require("../models");
-const Resource = db.resources;
-const Op = db.Sequelize.Op;
+const Resource = db.ressource;
 
-// Create a new resource (only admin)
+// Créer une ressource
 exports.create = (req, res) => {
-  if (req.user.role !== "admin") {
-    return res.status(403).send({ message: "Access denied" });
+  if (!req.body.nom || !req.body.type) {
+    return res.status(400).send({ message: "Nom et type sont requis." });
   }
 
   const resource = {
     nom: req.body.nom,
     type: req.body.type,
-    disponibilite: req.body.disponibilite || true,
+    disponibilite: req.body.disponibilite !== undefined ? req.body.disponibilite : true,
   };
 
   Resource.create(resource)
@@ -20,61 +18,66 @@ exports.create = (req, res) => {
     .catch((err) => res.status(500).send({ message: err.message }));
 };
 
-// Get all resources
+// Récupérer toutes les ressources
 exports.findAll = (req, res) => {
   Resource.findAll()
     .then((data) => res.send(data))
     .catch((err) => res.status(500).send({ message: err.message }));
 };
 
-// Update a resource (only admin)
-exports.update = (req, res) => {
-  if (req.user.role !== "admin") {
-    return res.status(403).send({ message: "Access denied" });
-  }
+// Récupérer une ressource par ID
+exports.findOne = (req, res) => {
+  const { id } = req.params;
 
-  Resource.update(req.body, { where: { id: req.params.id } })
-    .then((num) => {
-      if (num == 1) {
-        res.send({ message: "Resource updated successfully." });
-      } else {
-        res.send({ message: "Resource not found or no change made." });
-      }
-    })
-    .catch((err) => res.status(500).send({ message: err.message }));
-};
-
-// Delete a resource (only admin)
-exports.delete = (req, res) => {
-  if (req.user.role !== "admin") {
-    return res.status(403).send({ message: "Access denied" });
-  }
-
-  Resource.destroy({ where: { id: req.params.id } })
-    .then((num) => {
-      if (num == 1) {
-        res.send({ message: "Resource deleted successfully." });
-      } else {
-        res.send({ message: "Resource not found." });
-      }
-    })
-    .catch((err) => res.status(500).send({ message: err.message }));
-};
-
-// Toggle resource availability (only admin)
-exports.toggleAvailability = (req, res) => {
-  if (req.user.role !== "admin") {
-    return res.status(403).send({ message: "Access denied" });
-  }
-
-  Resource.findByPk(req.params.id)
+  Resource.findByPk(id)
     .then((resource) => {
-      if (!resource) return res.status(404).send({ message: "Resource not found." });
+      if (!resource) return res.status(404).send({ message: "Ressource non trouvée." });
+      res.send(resource);
+    })
+    .catch((err) => res.status(500).send({ message: err.message }));
+};
+
+// Mettre à jour une ressource
+exports.update = (req, res) => {
+  const { id } = req.params;
+
+  Resource.update(req.body, { where: { id } })
+    .then((num) => {
+      if (num == 1) {
+        res.send({ message: "Ressource mise à jour avec succès." });
+      } else {
+        res.status(404).send({ message: "Ressource non trouvée." });
+      }
+    })
+    .catch((err) => res.status(500).send({ message: err.message }));
+};
+
+// Supprimer une ressource
+exports.delete = (req, res) => {
+  const { id } = req.params;
+
+  Resource.destroy({ where: { id } })
+    .then((num) => {
+      if (num == 1) {
+        res.send({ message: "Ressource supprimée avec succès." });
+      } else {
+        res.status(404).send({ message: "Ressource non trouvée." });
+      }
+    })
+    .catch((err) => res.status(500).send({ message: err.message }));
+};
+
+// Changer la disponibilité d'une ressource
+exports.toggleAvailability = (req, res) => {
+  const { id } = req.params;
+
+  Resource.findByPk(id)
+    .then((resource) => {
+      if (!resource) return res.status(404).send({ message: "Ressource non trouvée." });
 
       resource.update({ disponibilite: !resource.disponibilite })
-        .then(() => res.send({ message: "Resource availability updated." }))
+        .then(() => res.send({ message: "Disponibilité mise à jour." }))
         .catch((err) => res.status(500).send({ message: err.message }));
     })
     .catch((err) => res.status(500).send({ message: err.message }));
 };
-
